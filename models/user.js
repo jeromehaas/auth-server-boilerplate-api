@@ -46,6 +46,6 @@ userSchema.methods.comparePassword  = function(candidatePassword, callback) {
 };
 
 // CREATE MODEL WITH NAME 'USER' AND THE USERSCHEMA
-const modelClass  = model('user', userSchema);
+const modelClass = model('user', userSchema);
 
-module.exports = modelClass
+module.exports = modelClass;
