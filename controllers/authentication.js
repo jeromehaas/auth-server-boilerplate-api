@@ -4,6 +4,9 @@ const jwt = require('jwt-simple');
 // BRING IN CRYPTO PACKAGE
 const crypto = require('crypto');
 
+// BRING IN BCRYPT 
+const bcrypt = require('bcrypt-nodejs');
+
 // BRING IN MODELS
 const User = require('../models/user');
 const ResetPasswordRequest = require('../models/reset-password-request');
@@ -21,7 +24,7 @@ const signup = (req, res, next) => {
 
     // CHECK IF EMAIL AND PASSWORD ARE IN THE REQUEST
     const { email, password } = req.body;
-    if ( !email || !password) return res.status(422).send({ error: 'No email or no password provided' })
+    if (!email || !password) return res.status(422).send({ error: 'No email or no password provided' })
 
     // SEARCH FOR USER WITCH GIVEN EMAIL
     User.findOne({ email: email }, (error, existingUser) => {
@@ -55,7 +58,7 @@ const signin = (req, res, next) => {
 };
 
 // FUNCTION TO REQUEST PASSWORD RESET
-const requestPasswordReset = (req, res, next) => {
+const resetPasswordRequest = (req, res, next) => {
 
     // CHECK IF EMAIL IS PROVIDED
     const { email } = req.body;
@@ -74,26 +77,70 @@ const requestPasswordReset = (req, res, next) => {
             if (existingResetPasswordRequest) existingResetPasswordRequest.deleteOne(); 
         });
 
-        // CREATE A NEW RESET PASSWORD REQUEST WITH THE GIVEN INPUT
-        const resetPasswordRequest = new ResetPasswordRequest({
-            email: email,
-        });
+        // GENERATE TOKEN 
+        const token = crypto.randomBytes(32).toString('hex');
 
-        // SAVE THE RESET PASSWORD REQUEST TO THE DATABASE 
-        resetPasswordRequest.save((error) => {
+        // GENERATE A SALT
+        bcrypt.genSalt(10, function(error, salt) {
             if (error) return next(error);
-            res.json({ resetPasswordRequestCreated: true });
+
+            // TAKE THE SALT AND THE USERS EMAIL TO CREATE A HASHED TOKEN
+            // THEN ADD THE TOKEN TO THE RESET PASSWORD REQUEST
+            bcrypt.hash(token, salt, null, function(error, hash) {
+                if (error) return next(error);
+           
+                // CREATE A NEW RESET PASSWORD REQUEST WITH THE GIVEN INPUT
+                const resetPasswordRequest = new ResetPasswordRequest({
+                    email: email,
+                    token: hash
+                });
+        
+                // SAVE THE RESET PASSWORD REQUEST TO THE DATABASE 
+                resetPasswordRequest.save((error) => {
+                    if (error) return next(error);
+                    res.json({ email: email, token: hash });
+                });
+
+            });
+
         });
 
 
 
     });
 
+};
 
-}
+// FUNCTION TO RESET PASSWORD
+const resetPassword = (req, res, next) => {
+    
+    // CHECK IF EMAIL AND PASSWORD IS PROVIDED
+    const { email, password, token} = req.body;
+    if (!email || !password || !token) return res.status(422).send({ error: 'No email, password or token provided'});
+
+    // CHECK IF A REQUEST FOR A PASSWORD RESET EXIST
+    ResetPasswordRequest.findOne({ email: email }, (error, existingResetPasswordRequest) => {
+        if (error) return next(error);
+        if (!existingResetPasswordRequest) return res.status(422).send({ error: 'No existing request exists'});
+
+        // COMPARE TOKEN WITH HASHED TOKEN
+        bcrypt.compare(token, existingResetPasswordRequest.token, (error, isMatch) => {
+            if (error) return next(error);
+
+            // UPDATE THE USER WITH THE GIVEN NEW PASSWORD
+            User.updateOne({ email: email }, { password: password }, (error, user) => {
+                res.json(user);
+            });
+
+        });
+
+    });
+     
+};
 
 module.exports = {
     signup,
     signin,
-    requestPasswordReset,
+    resetPasswordRequest,
+    resetPassword,
 };

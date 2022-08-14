@@ -26,8 +26,11 @@ const router = (app) => {
     // EXISTS IN OUR DATABASE AND IF ITS RELATED PASSWORD MATCHES THE INPUT
     app.post('/signin', requireSignin, Authentication.signin);
 
-    // PROVIDE ROUTE FOR RESETING A PASSWORD
-    app.post('/reset-password-request', Authentication.requestPasswordReset);
+    // PROVIDE ROUTE FOR REQESTING A PASSWORD RESET
+    app.post('/reset-password-request', Authentication.resetPasswordRequest);
+
+    // PROVIDE ROUTE FOR RESETING PASSWORD
+    app.post('/reset-password', Authentication.resetPassword);
 };
 
 module.exports = router;

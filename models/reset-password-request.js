@@ -11,26 +11,16 @@ const resetPasswordRequestSchema = new Schema({
     token: { type: String, required: false },
 });
 
-resetPasswordRequestSchema.pre('save', function(next) {
+// HELPER FUNCTION WHICH TAKES A TOKEN AND CHECKS IF IT MATCHERS WITH ITS HASH
+resetPasswordRequestSchema.methods.compareToken = function(candidateToken, callback) {
 
-    // BIND THE RESET PASSWORD REQUEST
-    const resetPasswordRequest = this;
-
-    // GENERATE A SALT
-    bcrypt.genSalt(10, function(error, salt) {
-        if (error) return next(error);
-
-        // TAKE THE SALT AND THE USERS EMAIL TO CREATE A HASHED TOKEN
-        // THEN ADD THE TOKEN TO THE RESET PASSWORD REQUEST
-        bcrypt.hash(resetPasswordRequest.email, salt, null, function(error, hash) {
-            if (error) return next(error);
-            resetPasswordRequest.token = hash;
-            next();
-        });
-
+    // COMPARE PLAIN TOKEN WITH HASH
+    bcrypt.compare(candidateToken, this.token , function(error, isMatch) {
+        if (error) return callback(error);
+        callback(null, isMatch);
     });
 
-});
+};
 
 const modelClass = model('reset-password-request', resetPasswordRequestSchema);
 

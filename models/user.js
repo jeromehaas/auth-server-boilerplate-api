@@ -35,7 +35,7 @@ userSchema.pre('save', function(next) {
 });
 
 // HELPER FUNCTION WHICH TAKES A PLAIN PASSWORD AND CHECKS IF IT MATCHES THE HASED PASSWORD
-userSchema.methods.comparePassword  = function(candidatePassword, callback) {
+userSchema.methods.comparePassword = function(candidatePassword, callback) {
 
     // COMPARE PLAIN PASSWORD WITH HASH
     bcrypt.compare(candidatePassword, this.password, function(error, isMatch) {
