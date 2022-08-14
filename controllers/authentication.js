@@ -33,16 +33,28 @@ const signup = (req, res, next) => {
         if (error) return next(error);
         if (existingUser) return res.status(422).send({ error: 'Email is in use'});
 
-        // CREATE A NEW USER WITH THE GIVEN INPUT
-        const user = new User({
-            email: email, 
-            password: password
-        });
-
-        // SAVE THE USER TO THE DATABASE AND RETURN A TOKEN TO THE USER
-        user.save((error) => {
+        // GENERATE A SALT 
+        bcrypt.genSalt(10, function(error, salt) {
             if (error) return next(error);
-            res.json({ token: generateToken(user) });
+
+            // TAKE THE SALT AND THE USERS PASSWORD TO CREATE A HASHED PASSWORD
+            bcrypt.hash(password, salt, null, function(error, hash) {
+                if (error) return next(error);
+
+                // CREATE A NEW USER WITH THE GIVEN EMAIL AND THE HASHED PASSWORD
+                const user = new User({
+                    email: email, 
+                    password: hash
+                });
+        
+                // SAVE THE USER TO THE DATABASE AND RETURN A TOKEN TO THE USER
+                user.save((error) => {
+                    if (error) return next(error);
+                    res.json({ token: generateToken(user) });
+                });
+
+            });
+
         });
 
     });
@@ -98,7 +110,7 @@ const resetPasswordRequest = (req, res, next) => {
                 // SAVE THE RESET PASSWORD REQUEST TO THE DATABASE 
                 resetPasswordRequest.save((error) => {
                     if (error) return next(error);
-                    res.json({ email: email, token: hash });
+                    res.json({ email: email, token: token });
                 });
 
             });
@@ -126,10 +138,23 @@ const resetPassword = (req, res, next) => {
         // COMPARE TOKEN WITH HASHED TOKEN
         bcrypt.compare(token, existingResetPasswordRequest.token, (error, isMatch) => {
             if (error) return next(error);
+            if (!isMatch) return res.status(422).send({ error: 'Token is not valid' });
 
-            // UPDATE THE USER WITH THE GIVEN NEW PASSWORD
-            User.updateOne({ email: email }, { password: password }, (error, user) => {
-                res.json(user);
+            // GENERATE A SALT 
+            bcrypt.genSalt(10, function(error, salt) {
+                if (error) return next(error);
+
+                // TAKE THE SALT AND THE USERS PASSWORD TO CREATE A HASHED PASSWORD
+                bcrypt.hash(password, salt, null, function(error, hash) {
+                    if (error) return next(error);
+
+                    // UPDATE THE USER WITH THE GIVEN NEW PASSWORD
+                    User.updateOne({ email: email }, { password: hash }, (error, user) => {
+                        res.json(user);
+                    });
+
+                });  
+
             });
 
         });

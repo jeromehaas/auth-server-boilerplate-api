@@ -1,5 +1,8 @@
-// BRIN IN USER MODEL
+// BRING IN USER MODEL
 const User = require('../models/user');
+
+// BRING IN BCRYPT
+const bcrypt = require('bcrypt-nodejs');
 
 // BRING IN PASSPORT PACKACKE AND ITS PACKAGES FOR THE STRATEGIES
 const passport = require('passport');
@@ -21,9 +24,8 @@ const localLogin = new LocalStrategy(localOptions, (email, password, done) => {
         if (error) return done(error);
         if (!user) return done(null, false);
 
-        // IF AN USER WITH THIS EMAIL WAS FOUND USE THE 'COMPAREPASSWORD' FUNCTION 
-        // FROM THE THE USER MODEL TO CHECK THAT THE PASSWORD IS CORRECT
-        user.comparePassword(password, (error, isMatch) => {
+        // COMPARE PLAIN PASSWORD WITH HASH
+        bcrypt.compare(password, user.password, (error, isMatch) => {
             if (error) return done(error);
             if (!isMatch) return done(null, false);
             return done(null, user);
